@@ -1,0 +1,29 @@
+---
+version: '3'
+services:
+  caddy:
+    build: ./images/caddy-security
+    depends_on:
+      - mail
+    env_file:
+      - common.env
+      - secrets.env
+    ports:
+      - '80:80'
+      - '443:443'
+    restart: unless-stopped
+    volumes:
+      - ${CONFIGS_DIR}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${VOLUMES_DIR}/caddy/data:/data/
+  mail:
+    expose:
+      - 25
+    image: bytemark/smtp
+    restart: unless-stopped
+  whoami:
+    depends_on:
+      - caddy
+    expose:
+      - 80
+    image: containous/whoami
+    restart: unless-stopped

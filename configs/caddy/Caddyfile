@@ -1,0 +1,54 @@
+{
+    order authenticate before respond
+    order authorize before reverse_proxy
+    
+    security {
+    	local identity store localdb {
+            realm local
+            path /data/auth/users.json
+        }
+
+        messaging email provider localhost-smtp-server {
+			address mail:25
+			protocol smtp
+			passwordless
+			sender caddy@{$DOMAIN} "User Registration for {$DOMAIN}"
+		}
+
+        user registration localdbRegistry {
+			dropbox /data/auth/users.json
+			title "User Registration"
+			code {$CODE}
+			admin email {$EMAIL}
+			email provider localhost-smtp-server
+			identity store localdb
+		}
+
+        authentication portal myportal {
+            enable identity store localdb
+            cookie domain mydomain.com
+            cookie lifetime 3600 # 1 hour in seconds
+
+            transform user {
+                match email {$EMAIL}
+                action add role authp/admin
+            }
+        }
+
+        authorization policy admin_policy {
+            set auth url https://auth.{$DOMAIN}
+            allow roles authp/admin
+        }
+    }
+
+
+}
+
+auth.{$DOMAIN} {
+    authenticate with myportal
+}
+
+whoami.{$DOMAIN} {
+    authorize with admin_policy
+    reverse_proxy whoami:80
+}
